@@ -1,0 +1,9 @@
+# Exemple de fichier d'inventaire
+# Copie ce fichier vers inventory.ini et remplace les valeurs
+
+[wordpress_servers]
+cloud1-vm ansible_host=IP_DE_TA_VM ansible_user=ubuntu
+
+[all:vars]
+ansible_ssh_common_args='-o StrictHostKeyChecking=no'
+# ansible_ssh_private_key_file=~/.ssh/id_rsa
