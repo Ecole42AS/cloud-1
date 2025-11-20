@@ -1,0 +1,13 @@
+# Fichiers sensibles - NE PAS COMMITTER
+.env
+
+# Volumes Docker (données locales)
+db_data/
+wp_data/
+
+.github/instructions
+docs/
+tests/
+
+venv/
+.venv

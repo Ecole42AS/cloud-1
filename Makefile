@@ -20,7 +20,7 @@ INVENTORY := $(ANSIBLE_DIR)/inventory.ini
 PLAYBOOK := $(ANSIBLE_DIR)/playbook.yml
 
 # Détection automatique du virtualenv Python
-VENV_PATH := .venv
+VENV_PATH := venv
 ifeq ($(shell test -d $(VENV_PATH) && echo yes),yes)
     PYTHON := $(CURDIR)/$(VENV_PATH)/bin/python
     ANSIBLE := $(CURDIR)/$(VENV_PATH)/bin/ansible
@@ -185,3 +185,12 @@ status: ## [util] Afficher le statut global du projet
 	@echo "  WordPress  : https://$(DOMAIN)"
 	@echo "  phpMyAdmin : https://$(DOMAIN)/phpmyadmin"
 	@echo ""
+
+.PHONY: venv-create
+venv-create: ## [util] Créer un venv local et installer Ansible
+	@echo "$(GREEN)>>> Création du virtualenv et installation d'Ansible$(NC)"
+	@python3 -m venv $(VENV_PATH)
+	@/bin/sh -c ". $(VENV_PATH)/bin/activate && pip install --upgrade pip setuptools wheel ansible"
+	@echo "$(GREEN) Virtualenv prêt dans $(VENV_PATH)$(NC)"
+	@echo "$(BLUE)Pour activer le virtualenv, exécutez :$(NC)"
+	@echo "  source $(VENV_PATH)/bin/activate"
