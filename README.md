@@ -20,7 +20,9 @@ Déploiement automatisé d’une stack WordPress (Docker, Nginx, MariaDB, phpMyA
 ```bash
 git clone <repo-url>
 cd cloud1
-cp .env.example .env   # renseigner les mots de passe et le domaine
+cp .env.exemple .env   # renseigner les mots de passe et le domaine
+make venv-create       # optionnel : crée venv + installe Ansible en local
+source venv/bin/activate
 docker compose up -d
 ```
 
@@ -29,6 +31,13 @@ Accès local :
 - phpMyAdmin : http://localhost/phpmyadmin
 
 ## Déploiement sur la VM avec Ansible
+
+Installer Ansible via le venv si ce n'est pas déjà fait :
+
+```bash
+make venv-create
+source venv/bin/activate
+```
 
 ```bash
 cd ansible
@@ -62,6 +71,7 @@ cloud1/
 
 ```bash
 make help          # liste des cibles
+make venv-create   # créer venv/ + installer Ansible
 make up            # démarrer la stack Docker
 make down          # arrêter
 make logs          # logs agrégés
