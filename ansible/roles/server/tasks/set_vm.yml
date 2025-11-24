@@ -1,0 +1,136 @@
+---
+name: Install Docker on Debian / Raspberry Pi OS
+  hosts: all
+  gather_facts: true
+  become: true
+  tasks:
+
+    # =============================
+    # Étape 9 : Création du répertoire de déploiement
+    # =============================
+    - name: Créer le répertoire de travail
+      ansible.builtin.file:
+        path: "{{ cloud1_project_dir }}"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+      # Ce dossier contiendra docker-compose.yml, .env et nginx.conf
+      # owner/group: appartient à l'utilisateur SSH (ubuntu)
+      # mode 0755: lecture/écriture pour le propriétaire, lecture pour les autres
+    
+    # =============================
+    # Étape 10 : Copie de docker-compose.yml
+    # =============================
+    - name: Copier docker-compose.yml vers le serveur
+      ansible.builtin.copy:
+        src: ../../../docker-compose.yml
+        dest: "{{ cloud1_project_dir }}/docker-compose.yml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      # src: chemin relatif depuis le rôle vers la racine du projet
+      # dest: destination sur le serveur distant
+      # mode 0644: lecture/écriture propriétaire, lecture pour les autres
+    
+    # =============================
+    # Étape 11 : Copie du fichier .env
+    # =============================
+    - name: Copier le fichier .env vers le serveur
+      ansible.builtin.copy:
+        src: ../../../.env
+        dest: "{{ cloud1_project_dir }}/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0600'
+      # mode 0600: lecture/écriture UNIQUEMENT pour le propriétaire (sécurité)
+      # Fichier sensible contenant les mots de passe
+    
+    # =============================
+    # Étape 12 : Création du répertoire nginx
+    # =============================
+    - name: Créer le répertoire nginx
+      ansible.builtin.file:
+        path: "{{ cloud1_project_dir }}/nginx"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+      # Dossier pour la configuration Nginx
+    
+    # =============================
+    # Étape 13 : Copie de la configuration Nginx
+    # =============================
+    - name: Copier nginx.conf vers le serveur
+      ansible.builtin.copy:
+        src: ../../../nginx/nginx.conf
+        dest: "{{ cloud1_project_dir }}/nginx/nginx.conf"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      # Configuration du reverse proxy Nginx
+    
+    # =============================
+    # Étape 14 : Copie du script Let's Encrypt
+    # =============================
+    - name: Créer le dossier scripts distant
+      ansible.builtin.file:
+        path: "{{ cloud1_project_dir }}/scripts"
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+    
+    - name: Copier le script init-letsencrypt
+      ansible.builtin.copy:
+        src: ../../../scripts/init-letsencrypt.sh
+        dest: "{{ cloud1_project_dir }}/scripts/init-letsencrypt.sh"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+    
+    # =============================
+    # Étape 15 : Démarrage de la stack Docker
+    # =============================
+    - name: Lancer docker compose up -d
+      ansible.builtin.shell: docker compose up -d
+      args:
+        chdir: "{{ cloud1_project_dir }}"
+      become: yes
+      register: docker_compose_output
+      # args.chdir: se place dans /opt/cloud1 avant d'exécuter la commande
+      # docker compose up -d: lancer la stack en arrière-plan
+      # become: yes: nécessaire pour docker (même si utilisateur dans groupe docker)
+    
+    # =============================
+    # Étape 16 : Vérifier que les conteneurs tournent
+    # =============================
+    - name: Lister les conteneurs Docker en cours d'exécution
+      ansible.builtin.command: docker ps
+      register: docker_ps_output
+      changed_when: false
+      become: yes
+    
+    - name: Afficher les conteneurs actifs
+      ansible.builtin.debug:
+        msg: "{{ docker_ps_output.stdout_lines }}"
+    
+    # =============================
+    # Étape 17 : Initialisation automatique des certificats
+    # =============================
+    - name: Vérifier si le certificat existe déjà
+      ansible.builtin.stat:
+        path: "{{ cloud1_letsencrypt_cert_path }}"
+      register: cloud1_cert_status
+      become: yes
+    
+    - name: Exécuter le script Let's Encrypt si nécessaire
+      ansible.builtin.command: >
+        bash scripts/init-letsencrypt.sh
+        {{ cloud1_domain }} {{ cloud1_letsencrypt_email }}
+        {% if cloud1_letsencrypt_use_staging | bool %} --staging{% endif %}
+        {% if cloud1_letsencrypt_force | bool %} --force{% endif %}
+      args:
+        chdir: "{{ cloud1_project_dir }}"
+      become: yes
+      when: cloud1_letsencrypt_force | bool or not cloud1_cert_status.stat.exists

@@ -1,0 +1,7 @@
+---
+- name: Install Docker
+  import_tasks: install_docker.yml
+
+- name: Configure VM
+  import_tasks: set_vm.yml
+
