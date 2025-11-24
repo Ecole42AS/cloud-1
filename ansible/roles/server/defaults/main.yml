@@ -1,25 +1,14 @@
 ---
-# =============================
-# Variables par défaut du rôle docker_server
-# =============================
-
-# Dossier distant où la stack Docker est déployée
 cloud1_project_dir: /opt/cloud1
-
-# Nom du domaine public (pour nginx et phpMyAdmin)
 cloud1_domain: mywp-cloud1.duckdns.org
-
-# Adresse email associée au compte Let's Encrypt
 cloud1_letsencrypt_email: alexandre.stutz@hotmail.com
 
-# Utiliser l'environnement de staging de Let's Encrypt (true pour éviter les quotas)
 cloud1_letsencrypt_use_staging: true
-
-# Recréer les certificats même s'ils existent déjà
 cloud1_letsencrypt_force: false
-
-# Nom du projet Docker Compose (basé sur le dossier)
 cloud1_project_name: "{{ cloud1_project_dir | basename }}"
 
-# Chemin attendu du certificat sur l'hôte (volume Docker)
 cloud1_letsencrypt_cert_path: "/var/lib/docker/volumes/{{ cloud1_project_name }}_certbot_certs/_data/live/{{ cloud1_domain }}/fullchain.pem"
+
+cloud1_mysql_root_password: "CHANGE_ME_IN_VAULT"
+cloud1_mysql_password: "CHANGE_ME_IN_VAULT"
+
