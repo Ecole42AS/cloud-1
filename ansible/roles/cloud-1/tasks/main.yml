@@ -1,7 +1,0 @@
----
-- name: install docker
-  import_tasks: install_docker.yml
-- name: Adding necessary file for the use of the docker
-  import_tasks: deploy_project_files.yml
-- name: Starting the stack
-  import_tasks: start_stack.yml

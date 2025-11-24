@@ -3,6 +3,13 @@
   hosts: wordpress_servers
   gather_facts: yes
   become: true
+<<<<<<< HEAD
   roles:
     #    - docker_server
     - cloud-1
+=======
+  
+  roles:
+    #    - docker_server
+    - server
+>>>>>>> d187f95 (FIX: fixing some role and adding some template for the .env)
