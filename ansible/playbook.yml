@@ -3,7 +3,6 @@
   hosts: wordpress_servers
   gather_facts: yes
   become: true
-  
   roles:
     #    - docker_server
-    - server
+    - cloud-1
