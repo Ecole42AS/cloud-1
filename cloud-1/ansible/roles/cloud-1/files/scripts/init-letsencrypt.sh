@@ -20,7 +20,7 @@ DOMAIN=$1
 EMAIL=$2
 shift 2
 
-USE_STAGING=true
+USE_STAGING=false
 FORCE_RENEWAL=false
 
 while [[ $# -gt 0 ]]; do
