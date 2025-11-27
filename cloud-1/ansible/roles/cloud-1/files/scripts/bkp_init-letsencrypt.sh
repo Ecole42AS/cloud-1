@@ -20,21 +20,14 @@ DOMAIN=$1
 EMAIL=$2
 shift 2
 
-USE_STAGING=true
+USE_STAGING=false
 FORCE_RENEWAL=false
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --staging)
-            USE_STAGING=true
-            ;;
-        --force)
-            FORCE_RENEWAL=true
-            ;;
-        *)
-            echo "Option inconnue: $1"
-            usage
-            ;;
+        --staging) USE_STAGING=true ;;
+        --force) FORCE_RENEWAL=true ;;
+        *) echo "Option inconnue: $1"; usage ;;
     esac
     shift
 done
@@ -42,7 +35,7 @@ done
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 PROJECT_NAME="$(basename "${PROJECT_DIR}")"
-CERT_ROOT="${PROJECT_DIR}/data/certs"
+CERT_ROOT="/var/lib/docker/volumes/${PROJECT_NAME}_certbot_certs/_data"
 CERT_PATH="${CERT_ROOT}/live/${DOMAIN}/fullchain.pem"
 
 cd "${PROJECT_DIR}"

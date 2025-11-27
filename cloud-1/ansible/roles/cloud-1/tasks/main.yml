@@ -168,6 +168,20 @@
   become: yes
   # Dossier pour la configuration Nginx
 
+- name: Créer les répertoires de données persistantes
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  loop:
+    - "{{ cloud1_project_dir }}/data/db"
+    - "{{ cloud1_project_dir }}/data/wordpress"
+    - "{{ cloud1_project_dir }}/data/certs"
+    - "{{ cloud1_project_dir }}/data/certbot-www"
+
+
 # =============================
 # Étape 13 : Copie de la configuration Nginx
 # =============================
