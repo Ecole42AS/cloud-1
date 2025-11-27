@@ -1,7 +1,9 @@
 ---
 cloud1_project_dir: /opt/cloud1
-cloud1_domain: mywp-cloud1.duckdns.org
-cloud1_letsencrypt_email: alexandre.stutz@hotmail.com
+cloud1_domain: cloud-1.fun
+cloud1_wordpress_domain: cloud-1.fun
+  #cloud1_domain: mywp-cloud1.duckdns.org
+cloud1_letsencrypt_email: agonelle@student.42lausanne.ch
 
 cloud1_letsencrypt_use_staging: true
 cloud1_letsencrypt_force: false
@@ -9,6 +11,5 @@ cloud1_project_name: "{{ cloud1_project_dir | basename }}"
 
 cloud1_letsencrypt_cert_path: "/var/lib/docker/volumes/{{ cloud1_project_name }}_certbot_certs/_data/live/{{ cloud1_domain }}/fullchain.pem"
 
-cloud1_mysql_root_password: "CHANGE_ME_IN_VAULT"
-cloud1_mysql_password: "CHANGE_ME_IN_VAULT"
-
+cloud1_mysql_root_password: "super_password"
+cloud1_mysql_password: "super_password_mysql"
