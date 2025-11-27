@@ -1,0 +1,26 @@
+---
+- name: Start Docker Compose stack
+  community.docker.docker_compose:
+    project_src: "{{ cloud1_project_dir }}"
+    state: present
+    restarted: yes
+  become: yes
+  become_user: "{{ ansible_user }}"
+
+- name: Check if certificate already exists
+  ansible.builtin.stat:
+    path: "{{ cloud1_letsencrypt_cert_path }}"
+  register: cert_stat
+  become: yes
+
+- name: Run Let's Encrypt initialization (if needed)
+  ansible.builtin.command: >
+    bash scripts/init-letsencrypt.sh
+    {{ cloud1_domain }} {{ cloud1_letsencrypt_email }}
+    {% if cloud1_letsencrypt_use_staging %}--staging{% endif %}
+    {% if cloud1_letsencrypt_force %}--force{% endif %}
+  args:
+    chdir: "{{ cloud1_project_dir }}"
+  become: yes
+  become_user: "{{ ansible_user }}"
+  when: cloud1_letsencrypt_force or not cert_stat.stat.exists
