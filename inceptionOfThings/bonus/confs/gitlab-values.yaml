@@ -1,0 +1,33 @@
+global:
+  hosts:
+    domain: localhost
+    gitlab:
+      name: gitlab.localhost
+    https: false
+  ingress:
+    configureCertmanager: false
+    class: traefik
+    annotations:
+      kubernetes.io/ingress.class: traefik
+  edition: ce
+
+# Disable subcharts via top-level flags
+nginx-ingress:
+  enabled: false
+installCertmanager: false
+prometheus:
+  install: false
+gitlab-runner:
+  install: false
+
+# Minimal resources
+gitlab:
+  webservice:
+    minReplicas: 1
+    maxReplicas: 1
+  sidekiq:
+    minReplicas: 1
+    maxReplicas: 1
+  gitlab-shell:
+    minReplicas: 1
+    maxReplicas: 1
