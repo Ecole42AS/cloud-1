@@ -11,3 +11,4 @@ tests/
 
 venv/
 .venv
+.pass_vault

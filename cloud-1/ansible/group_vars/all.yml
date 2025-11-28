@@ -9,5 +9,5 @@ cloud1_letsencrypt_use_staging: true
 cloud1_letsencrypt_force: false
 
 
-cloud1_mysql_root_password: "super_password"
-cloud1_mysql_password: "super_password_mysql"
+cloud1_mysql_root_password: "{{ vault_cloud1_mysql_root_password }}"
+cloud1_mysql_password: "{{ vault_cloud1_mysql_password }}"
