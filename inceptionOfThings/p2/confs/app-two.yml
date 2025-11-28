@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-two
+  name: app-two
+spec:
+  ports:
+  - name: 80-8080
+    port: 80
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: app-two
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: app-two
+  name: app-two
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-two
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: app-two
+    spec:
+      containers:
+      - image: paulbouwer/hello-kubernetes:1.10
+        name: hello-kubernetes
+        ports:
+        - containerPort: 8080
+        resources: {}

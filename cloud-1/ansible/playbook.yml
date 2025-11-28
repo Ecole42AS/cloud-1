@@ -1,20 +1,8 @@
-# ===================================
-# Playbook Ansible - Installation Docker
-# ===================================
-
 ---
-# Playbook principal pour configurer les serveurs WordPress
 - name: Configuration des serveurs WordPress
   hosts: wordpress_servers
-  
-  # gather_facts : collecte des informations sur le serveur (OS, IP, etc.)
   gather_facts: yes
-  
-  # Rôles à appliquer sur les serveurs
+  become: true
   roles:
-    - docker_server
-  # Le rôle docker_server va :
-  # 1. Installer Docker Engine
-  # 2. Installer docker compose (plugin)
-  # 3. Ajouter l'utilisateur au groupe docker
-  # 4. Vérifier que Docker fonctionne
+    #    - docker_server
+    - cloud-1

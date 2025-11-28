@@ -1,0 +1,56 @@
+Vagrant.configure("2") do |config|
+    config.vm.define "agonelleS" do |vm|
+      vm.vm.hostname = "agonelleS"
+  
+      vm.vm.box = "ubuntu/bionic64"
+  
+      vm.vm.network "private_network", ip: "192.168.56.110"
+  
+      vm.vm.provider "virtualbox" do |vb|
+        vb.memory = "2048"
+        vb.cpus = 2
+      end
+  
+      vm.vm.provision "shell", inline: <<-SHELL
+        echo "Updating system and installing dependencies..."
+        sudo apt-get update -y
+        sudo apt-get install -y curl
+  
+        echo "Installing K3s in server mode..."
+        curl -sfL https://get.k3s.io | sh -
+  
+        echo "Setting up kubectl..."
+        mkdir -p /home/vagrant/.kube
+        chown vagrant:vagrant /home/vagrant/.kube
+
+        sudo cp /etc/rancher/k3s/k3s.yaml config
+        chown vagrant:vagrant /home/vagrant/config
+        mv /home/vagrant/config /home/vagrant/.kube/
+
+        echo 'export KUBECONFIG=$HOME/.kube/config' >> /home/vagrant/.bashrc
+        echo "alias ku='kubectl'" >> /home/vagrant/.bashrc
+        echo "alias k='kubectl'" >> /home/vagrant/.bashrc
+        echo "alias kga='kubectl get all'" >> /home/vagrant/.bashrc
+        echo "alias kgp='kubectl get all'" >> /home/vagrant/.bashrc
+  
+        #mkdir -p ~/.kube
+        #sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+        #sudo chown $(id -u):$(id -g) ~/.kube/config
+  
+
+        echo "Deploying applications to K3s..."
+        sudo kubectl apply -f /vagrant/confs
+
+        echo "Testing K3s setup..."
+        sudo kubectl get pods
+        sudo kubectl get services
+        sudo kubectl get ingress
+
+        echo "K3s server setup and application deployment complete!"
+        SHELL
+
+        config.vm.synced_folder ".", "/vagrant"
+    end
+end
+  
+  
