@@ -11,4 +11,5 @@ tests/
 
 venv/
 .venv
-.pass_vault
+cloud1/ansible/.vault_pass
+./ansible/.vault_pass
