@@ -1,0 +1,46 @@
+---
+# ===================================
+# Rôle Ansible : letsencrypt_manager
+# Gestion des certificats SSL
+# ===================================
+
+# =============================
+# Étape 1 : Copie du script Let's Encrypt
+# =============================
+- name: Créer le dossier scripts distant
+  ansible.builtin.file:
+    path: "{{ cloud1_project_dir }}/scripts"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  become: yes
+
+- name: Copier le script init-letsencrypt
+  ansible.builtin.copy:
+    src: init-letsencrypt.sh
+    dest: "{{ cloud1_project_dir }}/scripts/init-letsencrypt.sh"
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0755'
+  become: yes
+
+# =============================
+# Étape 2 : Initialisation automatique des certificats
+# =============================
+- name: Vérifier si le certificat existe déjà
+  ansible.builtin.stat:
+    path: "{{ cloud1_letsencrypt_cert_path }}"
+  register: cloud1_cert_status
+  become: yes
+
+- name: Exécuter le script Let's Encrypt si nécessaire
+  ansible.builtin.command: >
+    bash scripts/init-letsencrypt.sh
+    {{ cloud1_domain }} {{ cloud1_letsencrypt_email }}
+    {% if cloud1_letsencrypt_use_staging | bool %} --staging{% endif %}
+    {% if cloud1_letsencrypt_force | bool %} --force{% endif %}
+  args:
+    chdir: "{{ cloud1_project_dir }}"
+  become: yes
+  when: cloud1_letsencrypt_force | bool or not cloud1_cert_status.stat.exists

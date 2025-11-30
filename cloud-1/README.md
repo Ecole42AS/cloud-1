@@ -1,92 +1,54 @@
-# Cloud-1
+# Cloud-1 Project
 
-Déploiement automatisé d’une stack WordPress (Docker, Nginx, MariaDB, phpMyAdmin) sur une VM Azure, avec orchestration Ansible.
+Déploiement automatisé d'une stack WordPress sécurisée (Docker + Nginx + Let's Encrypt) via Ansible.
 
-## Panorama rapide
+## Architecture
+*   **Docker** : Conteneurisation (WordPress, MySQL, Nginx).
+*   **Ansible** : Orchestration modulaire (Rôles : `docker_server`, `cloud-1`, `letsencrypt_manager`).
+*   **Let's Encrypt** : Certificats SSL gratuits.
 
-- Cible : Ubuntu 20.04 sur Azure, ports 22/80/443 ouverts.
-- Conteneurs : WordPress, MariaDB, phpMyAdmin, Nginx (reverse proxy HTTPS).
-- Sécurité : certificats Let’s Encrypt, base non exposée, secrets dans `.env`.
-- Automatisation : Makefile pour les commandes locales, Ansible pour le déploiement distant.
+## Prérequis
+*   Python 3
+*   Accès SSH au serveur cible (Debian/Ubuntu).
 
-## Pré-requis
+## Installation Rapide
 
-- Git, Docker et docker compose installés en local.
-- Accès SSH fonctionnel à la VM Azure (`ssh ubuntu@<ip>`).
-- Nom de domaine pointé sur l’IP publique pour activer HTTPS.
+1.  **Configurer l'inventaire** :
+    ```bash
+    cp ansible/inventory.ini.example ansible/inventory.ini
+    # Éditer ansible/inventory.ini avec l'IP de votre serveur
+    ```
 
-## Démarrage rapide (local)
+2.  **Configurer les variables et secrets** :
+    *   Les variables globales (domaine, email) sont dans `ansible/group_vars/all/vars.yml`.
+    *   Les secrets (mots de passe) sont dans `ansible/group_vars/all/vault.yml`.
 
-```bash
-git clone <repo-url>
-cd cloud1
-cp .env.exemple .env   # renseigner les mots de passe et le domaine
-make venv-create       # optionnel : crée venv + installe Ansible en local
-source venv/bin/activate
-docker compose up -d
-```
+    ```bash
+    # Créer le fichier de mot de passe Vault (ne pas commiter !)
+    echo "votre_mot_de_passe_vault" > ansible/.vault_pass
+    
+    # Éditer les secrets
+    make vault-decrypt
+    # ... modifier ansible/group_vars/all/vault.yml ...
+    make vault-encrypt
+    ```
 
-Accès local :
-- WordPress : http://localhost/
-- phpMyAdmin : http://localhost/phpmyadmin
+3.  **Déployer** :
+    ```bash
+    make deploy
+    ```
 
-## Déploiement sur la VM avec Ansible
+## Commandes Utiles
+*   `make deploy` : Déploiement complet.
+*   `make init` : Force la régénération des certificats SSL.
+*   `make ping` : Tester la connexion Ansible.
+*   `make vault-decrypt` / `make vault-encrypt` : Gérer les secrets chiffrés.
 
-Installer Ansible via le venv si ce n'est pas déjà fait :
+## Déploiement Partiel (Tags)
+Vous pouvez déployer uniquement certaines parties via Ansible :
+*   `ansible-playbook ansible/playbook.yml --tags "docker"` (Installation Docker)
+*   `ansible-playbook ansible/playbook.yml --tags "app"` (Mise à jour WordPress/Nginx)
+*   `ansible-playbook ansible/playbook.yml --tags "ssl"` (Gestion Certificats)
 
-```bash
-make venv-create
-source venv/bin/activate
-```
-
-```bash
-cd ansible
-# mettre à jour ansible/inventory.ini avec l’IP, l’utilisateur SSH et le domaine
-ansible all -m ping             # test de connexion
-ansible-playbook playbook.yml   # déploiement complet
-```
-
-Ce que fait le playbook : installe Docker et docker compose sur la VM, copie `docker-compose.yml`, `.env`, `nginx.conf` et `scripts/`, lance `docker compose up -d`, génère les certificats Let’s Encrypt si besoin.
-
-## Structure du projet
-
-```
-cloud1/
-├── docker-compose.yml       # services WordPress, DB, phpMyAdmin, Nginx
-├── .env                     # variables sensibles (non commité)
-├── nginx/
-│   └── nginx.conf           # reverse proxy + TLS
-├── scripts/
-│   └── init-letsencrypt.sh  # génération/renouvellement certifs
-├── ansible/
-│   ├── ansible.cfg
-│   ├── inventory.ini
-│   ├── playbook.yml
-│   └── roles/
-│       └── docker_server/   # installation Docker + déploiement stack
-└── Makefile                 # raccourcis Docker/Ansible
-```
-
-## Commandes utiles (Makefile)
-
-```bash
-make help          # liste des cibles
-make venv-create   # créer venv/ + installer Ansible
-make up            # démarrer la stack Docker
-make down          # arrêter
-make logs          # logs agrégés
-make status        # état des conteneurs
-make ping          # ping Ansible des hôtes
-make deploy        # ansible-playbook playbook.yml
-```
-
-## Documentation
-
-- ansible/README.md : prise en main Ansible et commandes de test
-- en.subject_cloud-1.pdf : énoncé du projet (référence)
-
-## Dépannage express
-
-- 502 Bad Gateway : vérifier `docker compose ps`, puis `docker compose logs wordpress` et `nginx`.
-- Certificat absent : relancer `scripts/init-letsencrypt.sh <domaine> <email> --staging` si besoin.
-- Connexion Ansible : tester `ansible all -m ping -vvv` et vérifier la clé SSH/`inventory.ini`.
+## Sécurité
+Un hook Git `pre-commit` empêche de commiter le fichier `vault.yml` s'il n'est pas chiffré.

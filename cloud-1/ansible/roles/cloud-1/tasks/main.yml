@@ -1,116 +1,11 @@
 ---
 # ===================================
-# Rôle Ansible : docker_server
-# Installation de Docker sur Ubuntu 20.04
+# Rôle Ansible : cloud-1
+# Déploiement de la stack WordPress
 # ===================================
 
-# Ce fichier contient toutes les tâches pour installer Docker
-# de manière automatisée et idempotente (rejouable sans problème)
+# Ce fichier contient toutes les tâches pour déployer l'application
 
-# =============================
-# Étape 1 : Mise à jour du cache APT
-# =============================
-- name: Mettre à jour le cache APT
-  ansible.builtin.apt:
-    update_cache: yes
-    cache_valid_time: 3600  # Cache valide 1h pour éviter des updates inutiles
-  become: yes
-  # become: yes = exécuter avec sudo (requis pour apt)
-
-# =============================
-# Étape 2 : Installation des prérequis
-# =============================
-- name: Installer les packages prérequis pour Docker
-  ansible.builtin.apt:
-    name:
-      - ca-certificates        # Certificats SSL pour HTTPS
-      - curl                   # Télécharger des fichiers
-      - gnupg                  # Vérifier les signatures GPG
-      - lsb-release           # Informations sur la distribution
-    state: present
-  become: yes
-  # state: present = installer si pas déjà présent (idempotent)
-
-# =============================
-# Étape 3 : Ajouter la clé GPG officielle de Docker
-# =============================
-- name: Créer le répertoire pour les clés APT
-  ansible.builtin.file:
-    path: /etc/apt/keyrings
-    state: directory
-    mode: '0755'
-  become: yes
-  # Crée /etc/apt/keyrings si n'existe pas déjà
-
-- name: Télécharger et ajouter la clé GPG de Docker
-  ansible.builtin.shell: |
-    curl -fsSL https://download.docker.com/linux/{{ansible_distribution | lower }}/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    chmod a+r /etc/apt/keyrings/docker.gpg
-  args:
-    creates: /etc/apt/keyrings/docker.gpg
-  become: yes
-  # creates: ne s'exécute que si le fichier n'existe pas (idempotence)
-
-# =============================
-# Étape 4 : Ajouter le dépôt officiel Docker
-# =============================
-- name: Ajouter le dépôt Docker aux sources APT
-  ansible.builtin.shell: |
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/{{ansible_distribution | lower }} \
-      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
-  args:
-    creates: /etc/apt/sources.list.d/docker.list
-  become: yes
-  # Ajoute le dépôt officiel Docker (pas celui d'Ubuntu qui est obsolète)
-
-# =============================
-# Étape 5 : Mettre à jour le cache APT avec le nouveau dépôt
-# =============================
-- name: Mettre à jour le cache APT après ajout du dépôt Docker
-  ansible.builtin.apt:
-    update_cache: yes
-  become: yes
-  # Nécessaire pour que APT connaisse les packages du dépôt Docker
-
-# =============================
-# Étape 6 : Installer Docker Engine
-# =============================
-- name: Installer Docker Engine et ses composants
-  ansible.builtin.apt:
-    name:
-      - docker-ce              # Docker Community Edition (moteur principal)
-      - docker-ce-cli          # Interface en ligne de commande
-      - containerd.io          # Runtime de conteneurs
-      - docker-buildx-plugin   # Plugin pour builds multi-architectures
-      - docker-compose-plugin  # Plugin docker compose (v2)
-    state: present
-  become: yes
-  # Installe Docker + docker compose en tant que plugin
-
-# =============================
-# Étape 7 : Démarrer et activer le service Docker
-# =============================
-- name: Démarrer le service Docker
-  ansible.builtin.service:
-    name: docker
-    state: started
-    enabled: yes
-  become: yes
-  # state: started = démarre Docker maintenant
-  # enabled: yes = démarre Docker automatiquement au boot
-
-# =============================
-# Étape 8 : Ajouter l'utilisateur au groupe docker
-# =============================
-- name: Ajouter l'utilisateur ubuntu au groupe docker
-  ansible.builtin.user:
-    name: "{{ ansible_user }}"  # ansible_user = utilisateur de connexion SSH
-    groups: docker
-    append: yes
-  become: yes
-  # append: yes = ajoute au groupe sans retirer des autres groupes
-  # Permet d'utiliser docker sans sudo
 
 
 # =============================
@@ -196,27 +91,6 @@
   # Configuration du reverse proxy Nginx
 
 # =============================
-# Étape 14 : Copie du script Let's Encrypt
-# =============================
-- name: Créer le dossier scripts distant
-  ansible.builtin.file:
-    path: "{{ cloud1_project_dir }}/scripts"
-    state: directory
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: '0755'
-  become: yes
-
-- name: Copier le script init-letsencrypt
-  ansible.builtin.copy:
-    src: scripts/init-letsencrypt.sh
-    dest: "{{ cloud1_project_dir }}/scripts/init-letsencrypt.sh"
-    owner: "{{ ansible_user }}"
-    group: "{{ ansible_user }}"
-    mode: '0755'
-  become: yes
-
-# =============================
 # Étape 15 : Démarrage de la stack Docker
 # =============================
 - name: Lancer docker compose up -d
@@ -242,22 +116,3 @@
   ansible.builtin.debug:
     msg: "{{ docker_ps_output.stdout_lines }}"
 
-# =============================
-# Étape 17 : Initialisation automatique des certificats
-# =============================
-- name: Vérifier si le certificat existe déjà
-  ansible.builtin.stat:
-    path: "{{ cloud1_letsencrypt_cert_path }}"
-  register: cloud1_cert_status
-  become: yes
-
-- name: Exécuter le script Let's Encrypt si nécessaire
-  ansible.builtin.command: >
-    bash scripts/init-letsencrypt.sh
-    {{ cloud1_domain }} {{ cloud1_letsencrypt_email }}
-    {% if cloud1_letsencrypt_use_staging | bool %} --staging{% endif %}
-    {% if cloud1_letsencrypt_force | bool %} --force{% endif %}
-  args:
-    chdir: "{{ cloud1_project_dir }}"
-  become: yes
-  when: cloud1_letsencrypt_force | bool or not cloud1_cert_status.stat.exists

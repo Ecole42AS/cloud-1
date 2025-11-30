@@ -25,10 +25,12 @@ ifeq ($(shell test -d $(VENV_PATH) && echo yes),yes)
     PYTHON := $(CURDIR)/$(VENV_PATH)/bin/python
     ANSIBLE := $(CURDIR)/$(VENV_PATH)/bin/ansible
     ANSIBLE_PLAYBOOK := $(CURDIR)/$(VENV_PATH)/bin/ansible-playbook
+    ANSIBLE_VAULT := $(CURDIR)/$(VENV_PATH)/bin/ansible-vault
 else
     PYTHON := python3
     ANSIBLE := ansible
     ANSIBLE_PLAYBOOK := ansible-playbook
+    ANSIBLE_VAULT := ansible-vault
 endif
 
 # Variables pour commandes ad-hoc Ansible (valeur par défaut si non spécifiées)
@@ -82,9 +84,9 @@ help: ## Affiche cette aide
 # =============================
 
 .PHONY: init
-init: ## [docker] Initialiser SSL (Nginx + Let's Encrypt) pour $(DOMAIN)
-	@echo "$(GREEN)>>> Initialisation SSL pour $(DOMAIN)$(NC)"
-	@sudo ./scripts/init-letsencrypt.sh $(DOMAIN) $(EMAIL)
+init: ## [ansible] Forcer l'initialisation SSL (via Ansible)
+	@echo "$(GREEN)>>> Initialisation SSL forcée via Ansible$(NC)"
+	@cd $(ANSIBLE_DIR) && $(ANSIBLE_PLAYBOOK) -i $(notdir $(INVENTORY)) $(notdir $(PLAYBOOK)) -e "cloud1_letsencrypt_force=true"
 
 .PHONY: logs-nginx
 logs-nginx: ## [ansible ad-hoc] Logs Nginx sur la VM (tail -50)
@@ -101,11 +103,10 @@ restart-stack: ## [ansible ad-hoc] Redémarrer nginx + wordpress sur la VM
 	@cd $(ANSIBLE_DIR) && $(ANSIBLE) -i $(notdir $(INVENTORY)) $(HOST) \
 		-m shell -a "cd /opt/cloud1 && docker compose restart nginx wordpress"
 
-.PHONY: certbot
-certbot: ## [docker] Obtenir/renouveler les certificats Let's Encrypt via certbot
-	@echo "$(GREEN)>>> Exécution de Certbot sur $(HOST)$(NC)"
-	@cd $(ANSIBLE_DIR) && $(ANSIBLE) -i $(notdir $(INVENTORY)) $(HOST) \
-		-m shell -a "cd /opt/cloud1 && docker compose run --rm certbot certonly --webroot -w /var/www/certbot -d $(DOMAIN) --email $(EMAIL) --agree-tos --no-eff-email $(CERTBOT_FLAGS)"
+.PHONY: certbot-renew
+certbot-renew: ## [ansible] Renouveler les certificats (via script distant)
+	@echo "$(GREEN)>>> Renouvellement des certificats sur $(HOST)$(NC)"
+	@cd $(ANSIBLE_DIR) && $(ANSIBLE) $(HOST) -i $(notdir $(INVENTORY)) -m shell -a "cd /opt/cloud1 && bash scripts/init-letsencrypt.sh $(DOMAIN) $(EMAIL) --force" --become
 	@echo "$(GREEN)✅ Certbot terminé$(NC)"
 	@echo "$(YELLOW)Pense à recharger nginx si nécessaire : make restart-stack$(NC)"
 
@@ -143,6 +144,16 @@ syntax: ## [ansible playbook] Vérifier la syntaxe du playbook
 	@echo "$(BLUE)>>> Vérification de la syntaxe$(NC)"
 	@cd $(ANSIBLE_DIR) && $(ANSIBLE_PLAYBOOK) -i $(notdir $(INVENTORY)) $(notdir $(PLAYBOOK)) --syntax-check
 	@echo "$(GREEN)✅ Syntaxe correcte$(NC)"
+
+.PHONY: vault-encrypt
+vault-encrypt: ## [ansible ad-hoc] Chiffrer le fichier vault.yml
+	@echo "$(GREEN)>>> Chiffrement de group_vars/all/vault.yml$(NC)"
+	@cd $(ANSIBLE_DIR) && $(ANSIBLE_VAULT) encrypt group_vars/all/vault.yml
+
+.PHONY: vault-decrypt
+vault-decrypt: ## [ansible ad-hoc] Déchiffrer le fichier vault.yml
+	@echo "$(GREEN)>>> Déchiffrement de group_vars/all/vault.yml$(NC)"
+	@cd $(ANSIBLE_DIR) && $(ANSIBLE_VAULT) decrypt group_vars/all/vault.yml
 
 # =============================
 # UTILITAIRES
@@ -187,10 +198,12 @@ status: ## [util] Afficher le statut global du projet
 	@echo ""
 
 .PHONY: venv-create
-venv-create: ## [util] Créer un venv local et installer Ansible
-	@echo "$(GREEN)>>> Création du virtualenv et installation d'Ansible$(NC)"
+venv-create: ## [util] Créer un venv local et installer Ansible (compatible Python 3.8+)
+	@echo "$(GREEN)>>> Création du virtualenv...$(NC)"
 	@python3 -m venv $(VENV_PATH)
-	@/bin/sh -c ". $(VENV_PATH)/bin/activate && pip install --upgrade pip setuptools wheel ansible"
-	@echo "$(GREEN) Virtualenv prêt dans $(VENV_PATH)$(NC)"
+	@echo "$(GREEN)>>> Installation d'Ansible...$(NC)"
+	@$(VENV_PATH)/bin/pip install --upgrade pip
+	@$(VENV_PATH)/bin/pip install "ansible-core<2.17" ansible==9.5.1
+	@echo "$(GREEN)✅ Environnement prêt. Activez-le avec : source $(VENV_PATH)/bin/activate$(NC)"
 	@echo "$(BLUE)Pour activer le virtualenv, exécutez :$(NC)"
 	@echo "  source $(VENV_PATH)/bin/activate"

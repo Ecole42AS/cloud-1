@@ -4,5 +4,9 @@
   gather_facts: yes
   become: true
   roles:
-    #    - docker_server
-    - cloud-1
+    - role: docker_server
+      tags: [docker, setup]
+    - role: cloud-1
+      tags: [app, deploy]
+    - role: letsencrypt_manager
+      tags: [ssl, certs]
