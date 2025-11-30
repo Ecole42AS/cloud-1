@@ -1,0 +1,87 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+  # Global configuration
+  config.vm.box = "generic/debian12"
+  config.vm.box_check_update = false
+
+  # Disable default synced folder (Required for WSL compatibility)
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  # WSL2 Specific Configuration: Force Vagrant to use Windows IP for SSH
+  if Vagrant::Util::Platform.wsl?
+    config.vm.provider :virtualbox do |vb|
+      windows_ip = `ip route show default | awk '{print $3}'`.strip
+      config.ssh.host = windows_ip
+    end
+  end
+
+  # Server Node
+  config.vm.define "astutzS" do |server|
+    server.vm.hostname = "astutzS"
+    server.vm.network "private_network", ip: "192.168.56.110"
+    
+    # Port forwarding for SSH access from WSL
+    server.vm.network "forwarded_port", guest: 22, host: 2222, id: "ssh", host_ip: "0.0.0.0", auto_correct: true
+
+    server.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 1
+    end
+
+    server.vm.provision "shell", inline: <<-SHELL
+      # Install curl
+      apt-get update && apt-get install -y curl
+
+      # Install K3s (Server)
+      curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip 192.168.56.110 --write-kubeconfig-mode 644" sh -
+
+      # Wait for token generation
+      while [ ! -f /var/lib/rancher/k3s/server/node-token ]; do
+        sleep 1
+      done
+
+      # Prepare token for worker (copy to vagrant user home for SCP)
+      cp /var/lib/rancher/k3s/server/node-token /home/vagrant/node-token
+      chown vagrant:vagrant /home/vagrant/node-token
+    SHELL
+  end
+
+  # Worker Node
+  config.vm.define "astutzSW" do |worker|
+    worker.vm.hostname = "astutzSW"
+    worker.vm.network "private_network", ip: "192.168.56.111"
+
+    # Port forwarding for SSH access from WSL
+    worker.vm.network "forwarded_port", guest: 22, host: 2200, id: "ssh", host_ip: "0.0.0.0", auto_correct: true
+
+    worker.vm.provider "virtualbox" do |vb|
+      vb.memory = "1024"
+      vb.cpus = 1
+    end
+
+    worker.vm.provision "shell", inline: <<-SHELL
+      # Install curl and sshpass
+      apt-get update && apt-get install -y curl sshpass
+
+      # Wait for server availability
+      echo "Waiting for server..."
+      while ! nc -z 192.168.56.110 22; do
+        sleep 2
+      done
+
+      # Fetch token from server via SCP
+      echo "Fetching token..."
+      while [ ! -f /tmp/node-token ]; do
+        sshpass -p "vagrant" scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null vagrant@192.168.56.110:/home/vagrant/node-token /tmp/node-token || true
+        sleep 2
+      done
+
+      TOKEN=$(cat /tmp/node-token)
+
+      # Install K3s (Agent)
+      curl -sfL https://get.k3s.io | K3S_URL=https://192.168.56.110:6443 K3S_TOKEN=$TOKEN sh -s - agent --node-ip 192.168.56.111
+    SHELL
+  end
+end
