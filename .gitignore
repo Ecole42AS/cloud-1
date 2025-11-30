@@ -11,5 +11,5 @@ tests/
 
 venv/
 .venv
-cloud1/ansible/.vault_pass
-./ansible/.vault_pass
+cloud-1/ansible/.vault_pass
+cloud-1/ansible/inventory.ini
