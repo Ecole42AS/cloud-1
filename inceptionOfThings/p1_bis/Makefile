@@ -1,5 +1,3 @@
-# Makefile for Inception-of-Things p1
-
 # Default target
 all: up
 
