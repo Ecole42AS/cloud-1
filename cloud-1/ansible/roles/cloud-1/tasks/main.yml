@@ -91,7 +91,7 @@
   # Configuration du reverse proxy Nginx
 
 # =============================
-# Étape 15 : Démarrage de la stack Docker
+# Étape 14 : Démarrage de la stack Docker
 # =============================
 - name: Lancer docker compose up -d
   ansible.builtin.shell: docker compose up -d
@@ -104,7 +104,7 @@
   # become: yes: nécessaire pour docker (même si utilisateur dans groupe docker)
 
 # =============================
-# Étape 16 : Vérifier que les conteneurs tournent
+# Étape 15 : Vérifier que les conteneurs tournent
 # =============================
 - name: Lister les conteneurs Docker en cours d'exécution
   ansible.builtin.command: docker ps

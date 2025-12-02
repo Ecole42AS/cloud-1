@@ -5,7 +5,7 @@
 # ===================================
 
 # =============================
-# Étape 1 : Copie du script Let's Encrypt
+# Étape 16 : Copie du script Let's Encrypt
 # =============================
 - name: Créer le dossier scripts distant
   ansible.builtin.file:
@@ -26,7 +26,7 @@
   become: yes
 
 # =============================
-# Étape 2 : Initialisation automatique des certificats
+# Étape 17 : Initialisation automatique des certificats
 # =============================
 - name: Vérifier si le certificat existe déjà
   ansible.builtin.stat:
