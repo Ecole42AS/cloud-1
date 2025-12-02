@@ -12,12 +12,12 @@ Vagrant.configure("2") do |config|
   # WSL2 Specific Configuration: Force Vagrant to use Windows IP for SSH
   if Vagrant::Util::Platform.wsl?
     config.vm.provider :virtualbox do |vb|
-      windows_ip = `ip route show default | awk '{print $3}'`.strip
+      windows_ip = `ip route show default | awk '{print $3}'`.strip # VirtualBox tourne côté Windows, pas côté Linux
       config.ssh.host = windows_ip
     end
   end
 
-  # Server Node
+  # ----------- Server Node -----------
   config.vm.define "astutzS" do |server|
     server.vm.hostname = "astutzS"
     server.vm.network "private_network", ip: "192.168.56.110"
@@ -48,7 +48,7 @@ Vagrant.configure("2") do |config|
     SHELL
   end
 
-  # Worker Node
+  # ----------- Worker Node -----------
   config.vm.define "astutzSW" do |worker|
     worker.vm.hostname = "astutzSW"
     worker.vm.network "private_network", ip: "192.168.56.111"
@@ -67,7 +67,7 @@ Vagrant.configure("2") do |config|
 
       # Wait for server availability
       echo "Waiting for server..."
-      while ! nc -z 192.168.56.110 22; do
+      while ! nc -z 192.168.56.110 22; do # wait for port 22 to be open
         sleep 2
       done
 
