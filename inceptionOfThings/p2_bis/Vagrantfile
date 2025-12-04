@@ -34,8 +34,11 @@ Vagrant.configure("2") do |config|
     server.vm.provision "file", source: "confs", destination: "/home/vagrant/confs"
 
     server.vm.provision "shell", inline: <<-SHELL
-      # Install curl
-      apt-get update && apt-get install -y curl
+      # non-interactive frontend to avoid dpkg errors
+      DEBIAN_FRONTEND=noninteractive
+
+      # Install curl and iptables (to avoid k3s warnings)
+      apt-get update && apt-get install -y curl iptables < /dev/null > /dev/null 2>&1
 
       # Install K3s (Server)
       curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip 192.168.56.110 --write-kubeconfig-mode 644" sh -
