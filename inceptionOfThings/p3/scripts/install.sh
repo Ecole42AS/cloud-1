@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e # Arrête le script immédiatement si une commande échoue
 
 # Check and Install K3d
 if ! command -v k3d &> /dev/null
@@ -22,11 +23,24 @@ fi
 
 # Create Cluster
 # Exposing 8888 on host to 80 on loadbalancer (Traefik)
-k3d cluster create p3-cluster --api-port 6443 -p "8888:80@loadbalancer" --agents 1 --wait
+if k3d cluster list | grep -q "p3-cluster"; then
+    echo "Cluster 'p3-cluster' already exists."
+else
+    k3d cluster create p3-cluster --api-port 6443 -p "8888:80@loadbalancer" --agents 1 --wait
+fi
 
 # Create Namespaces
-kubectl create namespace argocd
-kubectl create namespace dev
+if ! kubectl get namespace argocd > /dev/null 2>&1; then
+    kubectl create namespace argocd
+else
+    echo "Namespace 'argocd' already exists."
+fi
+
+if ! kubectl get namespace dev > /dev/null 2>&1; then
+    kubectl create namespace dev
+else
+    echo "Namespace 'dev' already exists."
+fi
 
 # Install Argo CD
 echo "Installing Argo CD..."
@@ -44,8 +58,8 @@ APP_CONF="$SCRIPT_DIR/../confs/application.yaml"
 if grep -q "YOUR_USERNAME/YOUR_REPO" "$APP_CONF"; then
     echo "------------------------------------------------"
     echo "Configuring Argo CD Application..."
-    REPO_URL="https://github.com/Ecole42AS/42cursus"
-    REPO_PATH="42spe/inceptionOfThings/p3/app"
+    REPO_URL="https://github.com/Ecole42AS/cloud-1"
+    REPO_PATH="inceptionOfThings/p3/app"
 
     if [ -n "$REPO_URL" ]; then
         # Escape slashes for sed

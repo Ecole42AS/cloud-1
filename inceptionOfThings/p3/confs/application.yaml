@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/Ecole42AS/42cursus'
+    repoURL: 'https://github.com/Ecole42AS/cloud-1'
     targetRevision: HEAD
-    path: 42spe/inceptionOfThings/p3/app
+    path: inceptionOfThings/p3/app
   destination:
     server: https://kubernetes.default.svc
     namespace: dev
