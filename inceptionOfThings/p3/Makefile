@@ -74,7 +74,30 @@ test:
 app-status:
 	@kubectl get application -n argocd
 	@echo ""
-	@kubectl describe application playground -n argocd | grep -A5 "Status:"
+	@kubectl describe application playground-app -n argocd | grep -A5 "Status:"
+
+# Force ArgoCD to sync the application
+sync:
+	@echo "Forcing ArgoCD sync..."
+	@kubectl -n argocd exec -it $$(kubectl -n argocd get pods -l app.kubernetes.io/name=argocd-server -o jsonpath='{.items[0].metadata.name}') -- argocd app sync playground-app --insecure --plaintext localhost:8080 2>/dev/null || \
+	kubectl -n argocd patch application playground-app --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{"revision":"HEAD"}}}'
+	@echo "Sync triggered! Waiting for sync to complete..."
+	@sleep 5
+	@make app-status
+
+# Update app version from v1 to v2 (for demo during evaluation)
+update-v2:
+	@echo "Updating deployment to v2..."
+	@sed -i 's/wil42\/playground:v1/wil42\/playground:v2/g' app/deployment.yaml
+	@echo "Updated! Now push to GitLab:"
+	@echo "  cd app && git add . && git commit -m 'Update to v2' && git push"
+
+# Update app version from v2 to v1 (rollback)
+update-v1:
+	@echo "Updating deployment to v1..."
+	@sed -i 's/wil42\/playground:v2/wil42\/playground:v1/g' app/deployment.yaml
+	@echo "Updated! Now push to GitLab:"
+	@echo "  cd app && git add . && git commit -m 'Rollback to v1' && git push"
 
 # Show help
 help:
@@ -88,6 +111,9 @@ help:
 	@echo "  make version      - Show current deployed app version"
 	@echo "  make test         - Test the app endpoint"
 	@echo "  make app-status   - Show ArgoCD application sync status"
+	@echo "  make sync         - Force ArgoCD to sync the application"
+	@echo "  make update-v2    - Update app version to v2"
+	@echo "  make update-v1    - Rollback app version to v1"
 	@echo "  make help         - Show this help message"
 
-.PHONY: all install clean re info port-forward status version test app-status help
+.PHONY: all install clean re info port-forward status version test app-status sync update-v2 update-v1 help

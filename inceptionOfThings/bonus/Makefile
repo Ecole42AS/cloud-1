@@ -103,6 +103,14 @@ app-status:
 	@echo ""
 	@kubectl describe application playground -n argocd 2>/dev/null | grep -A10 "Status:" || echo "Application 'playground' not found"
 
+# Force ArgoCD to sync the application
+sync:
+	@echo "Forcing ArgoCD sync..."
+	@kubectl -n argocd patch application playground --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{"revision":"HEAD"}}}'
+	@echo "Sync triggered! Waiting for sync to complete..."
+	@sleep 5
+	@make app-status
+
 # Update app version from v1 to v2 (for demo during evaluation)
 update-v2:
 	@echo "Updating deployment to v2..."
@@ -132,6 +140,7 @@ help:
 	@echo "  make status             - Show all namespaces and pods"
 	@echo "  make gitlab-status      - Show GitLab pods and services"
 	@echo "  make app-status         - Show ArgoCD application sync status"
+	@echo "  make sync               - Force ArgoCD to sync the application"
 	@echo ""
 	@echo "  make port-forward-argocd - Forward port 8080 to ArgoCD server"
 	@echo ""
@@ -143,4 +152,4 @@ help:
 	@echo ""
 	@echo "  make help               - Show this help message"
 
-.PHONY: all install clean re info port-forward-argocd status gitlab-status version test app-status update-v2 update-v1 help
+.PHONY: all install clean re info port-forward-argocd status gitlab-status version test app-status sync update-v2 update-v1 help
