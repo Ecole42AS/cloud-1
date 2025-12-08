@@ -101,12 +101,12 @@ test:
 app-status:
 	@kubectl get application -n argocd
 	@echo ""
-	@kubectl describe application playground -n argocd 2>/dev/null | grep -A10 "Status:" || echo "Application 'playground' not found"
+	@kubectl describe application playground-app -n argocd 2>/dev/null | grep -A10 "Status:" || echo "Application 'playground-app' not found"
 
 # Force ArgoCD to sync the application
 sync:
 	@echo "Forcing ArgoCD sync..."
-	@kubectl -n argocd patch application playground --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{"revision":"HEAD"}}}'
+	@kubectl -n argocd patch application playground-app --type merge -p '{"operation":{"initiatedBy":{"username":"admin"},"sync":{"revision":"HEAD"}}}'
 	@echo "Sync triggered! Waiting for sync to complete..."
 	@sleep 5
 	@make app-status
