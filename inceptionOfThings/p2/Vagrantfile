@@ -1,56 +1,64 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
 Vagrant.configure("2") do |config|
-    config.vm.define "agonelleS" do |vm|
-      vm.vm.hostname = "agonelleS"
-  
-      vm.vm.box = "ubuntu/bionic64"
-  
-      vm.vm.network "private_network", ip: "192.168.56.110"
-  
-      vm.vm.provider "virtualbox" do |vb|
-        vb.memory = "2048"
-        vb.cpus = 2
-      end
-  
-      vm.vm.provision "shell", inline: <<-SHELL
-        echo "Updating system and installing dependencies..."
-        sudo apt-get update -y
-        sudo apt-get install -y curl
-  
-        echo "Installing K3s in server mode..."
-        curl -sfL https://get.k3s.io | sh -
-  
-        echo "Setting up kubectl..."
-        mkdir -p /home/vagrant/.kube
-        chown vagrant:vagrant /home/vagrant/.kube
+  # Global configuration
+  config.vm.box = "generic/debian12"
+  config.vm.box_check_update = false
 
-        sudo cp /etc/rancher/k3s/k3s.yaml config
-        chown vagrant:vagrant /home/vagrant/config
-        mv /home/vagrant/config /home/vagrant/.kube/
+  # Disable default synced folder (Required for WSL compatibility)
+  config.vm.synced_folder ".", "/vagrant", disabled: true
 
-        echo 'export KUBECONFIG=$HOME/.kube/config' >> /home/vagrant/.bashrc
-        echo "alias ku='kubectl'" >> /home/vagrant/.bashrc
-        echo "alias k='kubectl'" >> /home/vagrant/.bashrc
-        echo "alias kga='kubectl get all'" >> /home/vagrant/.bashrc
-        echo "alias kgp='kubectl get all'" >> /home/vagrant/.bashrc
-  
-        #mkdir -p ~/.kube
-        #sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
-        #sudo chown $(id -u):$(id -g) ~/.kube/config
-  
-
-        echo "Deploying applications to K3s..."
-        sudo kubectl apply -f /vagrant/confs
-
-        echo "Testing K3s setup..."
-        sudo kubectl get pods
-        sudo kubectl get services
-        sudo kubectl get ingress
-
-        echo "K3s server setup and application deployment complete!"
-        SHELL
-
-        config.vm.synced_folder ".", "/vagrant"
+  # WSL2 Specific Configuration: Force Vagrant to use Windows IP for SSH
+  if Vagrant::Util::Platform.wsl?
+    config.vm.provider :virtualbox do |vb|
+      windows_ip = `ip route show default | awk '{print $3}'`.strip # VirtualBox tourne côté Windows, pas côté Linux
+      config.ssh.host = windows_ip
     end
+  end
+
+  # ----------- Server Node -----------
+  config.vm.define "astutzS" do |server|
+    server.vm.hostname = "astutzS"
+    server.vm.network "private_network", ip: "192.168.56.110"
+    
+    # Port forwarding for SSH access from WSL
+    server.vm.network "forwarded_port", guest: 22, host: 2222, id: "ssh", host_ip: "0.0.0.0", auto_correct: true
+
+    server.vm.provider "virtualbox" do |vb|
+      vb.memory = "2048"
+      vb.cpus = 2
+    end
+
+    # Provision files
+    server.vm.provision "file", source: "confs", destination: "/home/vagrant/confs"
+
+    server.vm.provision "shell", inline: <<-SHELL
+      # non-interactive frontend to avoid dpkg errors
+      DEBIAN_FRONTEND=noninteractive
+
+      # Install curl and iptables (to avoid k3s warnings)
+      apt-get update && apt-get install -y curl iptables < /dev/null > /dev/null 2>&1
+
+      # Install K3s (Server)
+      curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --node-ip 192.168.56.110 --write-kubeconfig-mode 644" sh -
+
+      # Configure kubectl alias and environment for vagrant user
+      echo "alias k='kubectl'" >> /home/vagrant/.bashrc
+      echo "export KUBECONFIG=/etc/rancher/k3s/k3s.yaml" >> /home/vagrant/.bashrc
+
+      # Wait for K3s to be ready
+      echo "Waiting for K3s to be ready..."
+      export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+      while ! /usr/local/bin/kubectl get nodes | grep -q "Ready"; do
+        echo "Waiting for K3s..."
+        sleep 2
+      done
+
+      # Apply manifests
+      echo "Deploying applications..."
+      export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+      /usr/local/bin/kubectl apply -f /home/vagrant/confs
+    SHELL
+  end
 end
-  
-  
