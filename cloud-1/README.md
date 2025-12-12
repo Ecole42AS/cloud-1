@@ -1,54 +1,65 @@
-# Cloud-1 Project
+# Cloud-1 — Automated WordPress Stack
 
-Déploiement automatisé d'une stack WordPress sécurisée (Docker + Nginx + Let's Encrypt) via Ansible.
+Fully automated deployment of a secure WordPress infrastructure using **Docker**, **Ansible**, and **Let's Encrypt**.
 
-## Architecture
-*   **Docker** : Conteneurisation (WordPress, MySQL, Nginx).
-*   **Ansible** : Orchestration modulaire (Rôles : `docker_server`, `cloud-1`, `letsencrypt_manager`).
-*   **Let's Encrypt** : Certificats SSL gratuits.
+## Stack
 
-## Prérequis
-*   Python 3
-*   Accès SSH au serveur cible (Debian/Ubuntu).
+| Component | Technology |
+|-----------|------------|
+| Orchestration | Ansible (roles-based) |
+| Containers | Docker Compose |
+| Web Server | Nginx (reverse proxy + SSL termination) |
+| Database | MariaDB |
+| SSL | Let's Encrypt (auto-renewal) |
+| Secrets | Ansible Vault |
 
-## Installation Rapide
+## Quick Start
 
-1.  **Configurer l'inventaire** :
-    ```bash
-    cp ansible/inventory.ini.example ansible/inventory.ini
-    # Éditer ansible/inventory.ini avec l'IP de votre serveur
-    ```
+```bash
+# 1. Configure inventory
+cp ansible/inventory.ini.example ansible/inventory.ini
 
-2.  **Configurer les variables et secrets** :
-    *   Les variables globales (domaine, email) sont dans `ansible/group_vars/all/vars.yml`.
-    *   Les secrets (mots de passe) sont dans `ansible/group_vars/all/vault.yml`.
+# 2. Set vault password
+echo "your_vault_password" > ansible/.vault_pass
 
-    ```bash
-    # Créer le fichier de mot de passe Vault (ne pas commiter !)
-    echo "votre_mot_de_passe_vault" > ansible/.vault_pass
-    
-    # Éditer les secrets
-    make vault-decrypt
-    # ... modifier ansible/group_vars/all/vault.yml ...
-    make vault-encrypt
-    ```
+# 3. Deploy
+make deploy
+```
 
-3.  **Déployer** :
-    ```bash
-    make deploy
-    ```
+## Commands
 
-## Commandes Utiles
-*   `make deploy` : Déploiement complet.
-*   `make init` : Force la régénération des certificats SSL.
-*   `make ping` : Tester la connexion Ansible.
-*   `make vault-decrypt` / `make vault-encrypt` : Gérer les secrets chiffrés.
+| Command | Description |
+|---------|-------------|
+| `make deploy` | Full deployment |
+| `make deploy-check` | Dry-run |
+| `make init` | Force SSL regeneration |
+| `make ping` | Test SSH connectivity |
+| `make vault-encrypt` | Encrypt secrets |
+| `make vault-decrypt` | Decrypt secrets |
 
-## Déploiement Partiel (Tags)
-Vous pouvez déployer uniquement certaines parties via Ansible :
-*   `ansible-playbook ansible/playbook.yml --tags "docker"` (Installation Docker)
-*   `ansible-playbook ansible/playbook.yml --tags "app"` (Mise à jour WordPress/Nginx)
-*   `ansible-playbook ansible/playbook.yml --tags "ssl"` (Gestion Certificats)
+## Partial Deployment
 
-## Sécurité
-Un hook Git `pre-commit` empêche de commiter le fichier `vault.yml` s'il n'est pas chiffré.
+```bash
+ansible-playbook ansible/playbook.yml --tags "docker"  # Docker only
+ansible-playbook ansible/playbook.yml --tags "app"     # App stack
+ansible-playbook ansible/playbook.yml --tags "ssl"     # Certificates
+```
+
+## Security
+
+A Git `pre-commit` hook prevents committing unencrypted `vault.yml` files.
+
+## Structure
+
+```
+ansible/
+├── playbook.yml
+├── inventory.ini
+├── group_vars/all/
+│   ├── vars.yml
+│   └── vault.yml (encrypted)
+└── roles/
+    ├── docker_server/
+    ├── cloud-1/
+    └── letsencrypt_manager/
+```

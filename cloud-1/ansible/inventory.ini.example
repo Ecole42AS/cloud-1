@@ -1,16 +1,8 @@
-# Groupe des serveurs WordPress
-# EXEMPLE DE CONFIGURATION - NE PAS METTRE DE VRAIES DONNEES ICI
+# WordPress servers group
+# EXAMPLE CONFIGURATION - DO NOT PUT REAL DATA HERE
 [wordpress_servers]
-# Remplacer x.x.x.x par l'IP réelle de votre serveur
-serveur-1 ansible_host=x.x.x.x ansible_user=debian
+# Replace x.x.x.x with your server's IP
+my-server ansible_host=x.x.x.x ansible_user=debian
 
-[wordpress_servers:vars]
-cloud1_domain=example.com
-cloud1_letsencrypt_email=user@example.com
-
-# Mettre sur false une fois le domaine validé pour obtenir un vrai certificat
-cloud1_letsencrypt_use_staging=true
-
-# Variables globales pour tous les serveurs
-[all:vars]
-ansible_python_interpreter=/usr/bin/python3
+# Variables are defined in group_vars/all/vars.yml
+# Secrets are encrypted in group_vars/all/vault.yml
